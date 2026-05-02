@@ -4,6 +4,23 @@ import { openrouter, MODELS } from "@/lib/openrouter/client";
 import { createClient } from "@/lib/supabase/server";
 import { tutorSystemPrompt } from "@/lib/openrouter/prompts/tutor";
 
+async function ensureProfile(supabase: any, userId: string) {
+  // Check if profile exists
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .single();
+
+  if (!existing) {
+    // Create profile if missing
+    await supabase.from("profiles").insert({
+      id: userId,
+      trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  }
+}
+
 export async function sendMessage(
   conversationId: string,
   content: string,
@@ -19,6 +36,9 @@ export async function sendMessage(
     .single();
 
   if (!conversation) throw new Error("Conversation not found");
+
+  // Ensure profile exists
+  await ensureProfile(supabase, conversation.user_id);
 
   // Get user's grade level
   const { data: profile } = await supabase
@@ -38,10 +58,11 @@ export async function sendMessage(
 
   const systemPrompt = tutorSystemPrompt(conversation.subject, gradeLevel);
 
-  const conversationHistory = (messages as Array<{ role: string; content: string }> | null)?.map((m: { role: string; content: string }) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content,
-  })) || [];
+  const conversationHistory =
+    (messages as Array<{ role: string; content: string }> | null)?.map((m: { role: string; content: string }) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content,
+    })) || [];
 
   const userMessageContent = imageUrl
     ? [
@@ -65,6 +86,9 @@ export async function sendMessage(
 
 export async function createConversation(subject: string, userId: string) {
   const supabase = createClient();
+
+  // Ensure profile exists before creating conversation
+  await ensureProfile(supabase, userId);
 
   const { data, error } = await supabase
     .from("conversations")

@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles } from "lucide-react";
 import { GRADE_LEVELS, SUBJECTS } from "@/lib/constants";
@@ -31,7 +29,9 @@ export default function OnboardingPage() {
   const applyCoupon = async () => {
     if (couponCode.trim().toUpperCase() === "ASTRAUNLIMITED") {
       setCouponApplied(true);
+      setError("");
     } else {
+      setCouponApplied(false);
       setError("Ungültiger Coupon-Code");
     }
   };
@@ -49,6 +49,20 @@ export default function OnboardingPage() {
         setError("Nicht angemeldet. Bitte melde dich an.");
         setLoading(false);
         return;
+      }
+
+      // Ensure profile exists
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (!existingProfile) {
+        await supabase.from("profiles").insert({
+          id: user.id,
+          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        });
       }
 
       // Update profile with grade, subjects, and coupon
@@ -98,6 +112,12 @@ export default function OnboardingPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-white">Schritt 1: Wähle deine Klassenstufe</h3>
@@ -116,13 +136,13 @@ export default function OnboardingPage() {
                   </button>
                 ))}
               </div>
-              <Button
-                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+              <button
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 disabled={!gradeLevel}
                 onClick={() => setStep(2)}
               >
                 Weiter
-              </Button>
+              </button>
             </div>
           )}
 
@@ -145,16 +165,19 @@ export default function OnboardingPage() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(1)} className="border-white/10">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all"
+                >
                   Zurück
-                </Button>
-                <Button
-                  className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+                </button>
+                <button
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   disabled={selectedSubjects.length === 0}
                   onClick={() => setStep(3)}
                 >
                   Weiter
-                </Button>
+                </button>
               </div>
             </div>
           )}
@@ -174,14 +197,13 @@ export default function OnboardingPage() {
                   placeholder="Code eingeben"
                   className="flex-1 h-10 px-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder:text-muted-foreground focus:outline-none focus:border-violet-500"
                 />
-                <Button
+                <button
                   onClick={applyCoupon}
-                  variant="outline"
-                  className="border-white/10"
+                  className="px-4 py-2 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all disabled:opacity-50"
                   disabled={!couponCode.trim()}
                 >
                   Einlösen
-                </Button>
+                </button>
               </div>
 
               {couponApplied && (
@@ -191,21 +213,20 @@ export default function OnboardingPage() {
                 </div>
               )}
 
-              {error && (
-                <p className="text-sm text-red-400">{error}</p>
-              )}
-
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="border-white/10">
+                <button
+                  onClick={() => setStep(2)}
+                  className="px-4 py-2.5 rounded-xl border border-white/10 text-white hover:bg-white/5 transition-all"
+                >
                   Zurück
-                </Button>
-                <Button
-                  className="flex-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+                </button>
+                <button
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   disabled={loading}
                   onClick={handleSubmit}
                 >
                   {loading ? "Wird gespeichert..." : "Loslegen"}
-                </Button>
+                </button>
               </div>
             </div>
           )}

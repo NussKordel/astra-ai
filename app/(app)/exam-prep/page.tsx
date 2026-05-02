@@ -3,31 +3,48 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Clock, BookOpen } from "lucide-react";
+import { Clock } from "lucide-react";
 import { SUBJECTS } from "@/lib/constants";
 
 export default function ExamPrepPage() {
   const [selectedSubject, setSelectedSubject] = useState("");
   const [timed, setTimed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
   const handleStart = async () => {
     if (!selectedSubject) return;
     setLoading(true);
+    setError("");
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { router.push("/login"); return; }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/login"); return; }
 
-    const { data: session } = await supabase
-      .from("conversations")
-      .insert({ user_id: user.id, subject: selectedSubject, module: "exam_prep" })
-      .select()
-      .single();
+      // Ensure profile exists
+      const { data: existingProfile } = await supabase.from("profiles").select("id").eq("id", user.id).single();
+      if (!existingProfile) {
+        await supabase.from("profiles").insert({
+          id: user.id,
+          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        });
+      }
 
-    if (session) router.push(`/exam-prep/${session.id}?timed=${timed}`);
+      const { data: session, error: convError } = await supabase
+        .from("conversations")
+        .insert({ user_id: user.id, subject: selectedSubject, module: "exam_prep" })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+      if (session) router.push(`/exam-prep/${session.id}?timed=${timed}`);
+    } catch (err: any) {
+      console.error("Exam prep error:", err);
+      setError(err.message || "Fehler beim Erstellen der Prüfung");
+    }
+
     setLoading(false);
   };
 
@@ -37,6 +54,12 @@ export default function ExamPrepPage() {
         <h1 className="text-2xl font-bold text-white">Prüfungstraining</h1>
         <p className="text-muted-foreground mt-1">Bereite dich mit KI-generierten Prüfungsaufgaben vor</p>
       </div>
+
+      {error && (
+        <div className="mb-4 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5">
         <h3 className="font-medium text-white mb-4">Neue Prüfung starten</h3>
@@ -80,13 +103,13 @@ export default function ExamPrepPage() {
           </button>
         </div>
 
-        <Button
+        <button
           onClick={handleStart}
           disabled={!selectedSubject || loading}
-          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           {loading ? "Wird erstellt..." : "Prüfung starten"}
-        </Button>
+        </button>
       </div>
     </div>
   );
