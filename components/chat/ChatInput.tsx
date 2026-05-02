@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Button } from "@/components/ui/button";
 import { Image, Send } from "lucide-react";
 
 interface ChatInputProps {
@@ -70,7 +69,7 @@ export default function ChatInput({ onSend, onUploadImage, disabled }: ChatInput
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading || disabled}
-          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-muted-foreground"
+          className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors text-muted-foreground hover:text-white"
         >
           <Image className="w-4 h-4" />
         </button>
