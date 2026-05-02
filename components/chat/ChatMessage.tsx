@@ -1,6 +1,9 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
@@ -37,8 +40,10 @@ export default function ChatMessage({ role, content, imageUrl }: ChatMessageProp
             className="max-w-full rounded-xl mb-2 max-h-64 object-contain"
           />
         )}
-        <div className="prose prose-sm max-w-none prose-invert">
-          <ReactMarkdown>{content}</ReactMarkdown>
+        <div className="prose prose-sm max-w-none prose-invert prose-pre:bg-black/30">
+          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            {content}
+          </ReactMarkdown>
         </div>
         {!isUser && (
           <button

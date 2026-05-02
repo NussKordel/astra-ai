@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ChatInput from "@/components/chat/ChatInput";
 import {
@@ -22,10 +21,7 @@ interface Message {
 
 export default function TutorChatPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const subject = decodeURIComponent(params.subject as string);
-  const initialMessage = searchParams.get("initialMessage");
-  
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,7 +44,6 @@ export default function TutorChatPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Check API limits
       const { data: profile } = await supabase
         .from("profiles")
         .select("api_calls_used, coupon_code, subscription_tier, trial_ends_at")
@@ -57,19 +52,16 @@ export default function TutorChatPage() {
 
       if (profile) {
         setApiCallsUsed(profile.api_calls_used || 0);
-        
         const isUnlimited = 
           profile.coupon_code === "ASTRAUNLIMITED" ||
           profile.subscription_tier === "plus" ||
           profile.subscription_tier === "abitur" ||
           (profile.trial_ends_at && new Date(profile.trial_ends_at) > new Date());
-        
         if (!isUnlimited && (profile.api_calls_used || 0) >= 3) {
           setApiLimitReached(true);
         }
       }
 
-      // Find or create conversation
       const { data: existing } = await supabase
         .from("conversations")
         .select("id")
@@ -96,16 +88,8 @@ export default function TutorChatPage() {
         .eq("conversation_id", convId)
         .order("created_at", { ascending: true });
 
-      if (msgs) {
-        setMessages(msgs);
-      }
-
-      // Send initial message if provided
-      if (initialMessage && msgs && msgs.length === 0) {
-        handleSend(initialMessage);
-      }
+      if (msgs) setMessages(msgs);
     }
-
     init();
   }, [subject]);
 
@@ -113,7 +97,6 @@ export default function TutorChatPage() {
     if (!conversationId) return;
     if (apiLimitReached) return;
 
-    // Check limit again before sending
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
@@ -135,7 +118,6 @@ export default function TutorChatPage() {
       return;
     }
 
-    // Save user message
     await saveMessage(conversationId, "user", content, imageUrl);
 
     const tempId = Date.now().toString();
@@ -153,6 +135,11 @@ export default function TutorChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId, content, imageUrl }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Server error");
+      }
 
       if (!response.body) throw new Error("No response body");
 
@@ -175,22 +162,14 @@ export default function TutorChatPage() {
         { id: (Date.now() + 1).toString(), role: "assistant", content: fullResponse, image_url: null, created_at: new Date().toISOString() },
       ]);
 
-      // Increment API call counter for free users
       if (!isUnlimited) {
-        await supabase
-          .from("profiles")
-          .update({ api_calls_used: (profile?.api_calls_used || 0) + 1 })
-          .eq("id", user.id);
-        
+        await supabase.from("profiles").update({ api_calls_used: (profile?.api_calls_used || 0) + 1 }).eq("id", user.id);
         setApiCallsUsed((prev) => prev + 1);
-        
-        if ((profile?.api_calls_used || 0) + 1 >= 3) {
-          setApiLimitReached(true);
-        }
+        if ((profile?.api_calls_used || 0) + 1 >= 3) setApiLimitReached(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Chat error:", error);
-      const errorMsg = "KI momentan nicht verfügbar, bitte versuche es erneut.";
+      const errorMsg = error.message || "KI momentan nicht verfügbar, bitte versuche es erneut.";
       await saveMessage(conversationId, "assistant", errorMsg);
       setMessages((prev) => [
         ...prev,
@@ -210,7 +189,6 @@ export default function TutorChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-[#0a0a0a]">
-      {/* Header */}
       <div className="px-6 py-4 border-b border-white/5">
         <h1 className="text-xl font-semibold text-white">{subject}</h1>
         <p className="text-sm text-muted-foreground">
@@ -218,28 +196,23 @@ export default function TutorChatPage() {
         </p>
       </div>
 
-      {/* API Limit Warning */}
       {apiLimitReached && (
         <div className="mx-6 mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
           <p className="text-amber-400 text-sm font-medium mb-2">
             Du hast dein Free-Limit von 3 Nachrichten erreicht.
           </p>
-          <Button
-            onClick={() => window.location.href = "/settings"}
-            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
-            size="sm"
-          >
+          <a href="/settings" className="inline-block px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-medium">
             Upgrade auf Astra Plus
-          </Button>
+          </a>
         </div>
       )}
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 px-6 py-4">
         {messages.length === 0 && !loading && (
           <div className="text-center text-muted-foreground py-12">
             <p className="text-lg mb-2">Willkommen zum {subject}-Tutor!</p>
-            <p>Stelle eine Frage oder lade ein Bild deiner Hausaufgaben hoch.</p>
+            <p>Ich führe dich Schritt für Schritt durch die Aufgaben.</p>
+            <p className="text-sm mt-2">Stelle eine Frage oder lade ein Bild hoch.</p>
           </div>
         )}
 
@@ -264,7 +237,6 @@ export default function TutorChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
       <ChatInput onSend={handleSend} onUploadImage={handleUploadImage} disabled={loading || apiLimitReached} />
     </div>
   );
