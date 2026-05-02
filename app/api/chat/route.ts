@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   const systemPrompt = tutorSystemPrompt(conversation.subject, gradeLevel);
 
   const conversationHistory =
-    messages?.map((m) => ({
+    (messages as Array<{ role: string; content: string }> | null)?.map((m: { role: string; content: string }) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
     })) || [];
