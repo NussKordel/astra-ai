@@ -1,3 +1,5 @@
+"use client";
+
 import ReactMarkdown from "react-markdown";
 import { cn } from "@/lib/utils";
 
@@ -19,36 +21,37 @@ export default function ChatMessage({ role, content, imageUrl }: ChatMessageProp
   };
 
   return (
-    <div
-      className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start"
-      )}
-    >
+    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-lg px-4 py-3",
+          "max-w-[80%] rounded-2xl px-5 py-3.5",
           isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-foreground"
+            ? "bg-violet-600 text-white"
+            : "bg-white/5 text-foreground border border-white/5"
         )}
       >
         {imageUrl && (
           <img
             src={imageUrl}
             alt="Uploaded homework"
-            className="max-w-full rounded-md mb-2 max-h-64 object-contain"
+            className="max-w-full rounded-xl mb-2 max-h-64 object-contain"
           />
         )}
-        <div className="prose prose-sm max-w-none dark:prose-invert">
+        <div className="prose prose-sm max-w-none prose-invert">
           <ReactMarkdown>{content}</ReactMarkdown>
         </div>
         {!isUser && (
           <button
             onClick={speakText}
-            className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+            className="mt-2 text-xs text-muted-foreground hover:text-violet-400 transition-colors flex items-center gap-1"
           >
-            🔊 Vorlesen
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+            Vorlesen
           </button>
         )}
       </div>

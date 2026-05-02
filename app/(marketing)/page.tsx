@@ -1,97 +1,64 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Sparkles, BookOpen, Brain, BarChart3, Camera, Headphones, Star, Users } from "lucide-react";
 
 const features = [
-  {
-    title: "KI-Tutor",
-    description: "Persönlicher KI-Nachhilfelehrer für 13+ Fächer. Erklärt Schritt für Schritt auf Deutsch.",
-    icon: "🎓",
-  },
-  {
-    title: "Prüfungstraining",
-    description: "Simuliere echte Klausuren mit zeitgesteuerten Übungen und sofortigem Feedback.",
-    icon: "📝",
-  },
-  {
-    title: "Abitur AI",
-    description: "415+ echte Abitur-Aufgaben mit KI-gestützter Schritt-für-Schritt-Erklärung.",
-    icon: "📊",
-  },
-  {
-    title: "Fortschrittsverfolgung",
-    description: "Behalte deinen Lernfortschritt im Blick mit Mastery-Metriken und Streak-Zählern.",
-    icon: "📈",
-  },
-  {
-    title: "Bild-Scan",
-    description: "Fotografiere deine Hausaufgaben und lass sie von der KI sofort lösen.",
-    icon: "📷",
-  },
-  {
-    title: "Podcast-Modus",
-    description: "Lass dir Erklärungen und Lösungen einfach vorlesen.",
-    icon: "🎧",
-  },
+  { title: "KI-Tutor", description: "Persönlicher KI-Nachhilfelehrer für 13+ Fächer.", icon: Brain },
+  { title: "Prüfungstraining", description: "Simuliere echte Klausuren mit sofortigem Feedback.", icon: BookOpen },
+  { title: "Abitur AI", description: "415+ echte Abitur-Aufgaben mit KI-Erklärungen.", icon: BarChart3 },
+  { title: "Fortschrittsverfolgung", description: "Behalte deinen Lernfortschritt im Blick.", icon: BarChart3 },
+  { title: "Bild-Scan", description: "Fotografiere Hausaufgaben und lass sie sofort lösen.", icon: Camera },
+  { title: "Podcast-Modus", description: "Lass dir Erklärungen einfach vorlesen.", icon: Headphones },
 ];
 
 const testimonials = [
-  {
-    name: "Lisa M.",
-    grade: "Klasse 11",
-    text: "Dank Astra AI habe ich in Mathe von einer 4 auf eine 2 verbessert. Die Erklärungen sind super verständlich!",
-  },
-  {
-    name: "Max K.",
-    grade: "Klasse 13",
-    text: "Das Abitur-Training hat mir so geholfen. Die echten Aufgaben aus vergangenen Jahren sind Gold wert.",
-  },
-  {
-    name: "Sarah B.",
-    grade: "Uni",
-    text: "Endlich eine App, die auch komplexe Uni-Themen einfach erklärt. Absolut empfehlenswert!",
-  },
+  { name: "Lisa M.", grade: "Klasse 11", text: "Dank Astra AI habe ich in Mathe von einer 4 auf eine 2 verbessert." },
+  { name: "Max K.", grade: "Klasse 13", text: "Das Abitur-Training hat mir so geholfen. Echte Aufgaben sind Gold wert." },
+  { name: "Sarah B.", grade: "Uni", text: "Endlich eine App, die auch komplexe Uni-Themen einfach erklärt." },
 ];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-background py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Badge className="mb-4" variant="secondary">
+      <section className="relative overflow-hidden py-24 lg:py-40">
+        <div className="absolute inset-0 bg-gradient-to-b from-violet-900/20 via-transparent to-transparent" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+          <Badge className="mb-6 bg-violet-500/10 text-violet-400 border-violet-500/20" variant="outline">
+            <Sparkles className="w-3 h-3 mr-1" />
             Jetzt mit 7 Tagen kostenlos testen
           </Badge>
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6">
+          <h1 className="text-5xl sm:text-6xl lg:text-8xl font-bold tracking-tight mb-6">
             Verbessere deine Noten{" "}
-            <span className="text-primary">2x schneller</span>
+            <span className="gradient-text">2x schneller</span>
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Deine persönliche KI-Nachhilfe für alle Fächer — von der Grundschule bis zur Uni.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup">
-              <Button size="lg" className="text-lg px-8">
+              <Button size="lg" className="text-lg px-8 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500">
                 Kostenlos starten
               </Button>
             </Link>
             <Link href="/pricing">
-              <Button size="lg" variant="outline" className="text-lg px-8">
+              <Button size="lg" variant="outline" className="text-lg px-8 border-white/10 hover:bg-white/5">
                 Preise ansehen
               </Button>
             </Link>
           </div>
 
-          {/* Social Proof */}
-          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-8 text-muted-foreground">
+          <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-8 text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-foreground">1.000.000+</span>
+              <Users className="w-5 h-5" />
+              <span className="text-2xl font-bold text-white">1.000.000+</span>
               <span>Schüler</span>
             </div>
-            <div className="hidden sm:block w-px h-8 bg-border" />
+            <div className="hidden sm:block w-px h-8 bg-white/10" />
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-foreground">4.87</span>
+              <Star className="w-5 h-5 text-amber-500" />
+              <span className="text-2xl font-bold text-white">4.87</span>
               <span>Sterne</span>
             </div>
           </div>
@@ -99,84 +66,77 @@ export default function LandingPage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 bg-background">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Alles, was du zum Lernen brauchst
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Alles, was du zum Lernen brauchst</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature) => (
-              <Card key={feature.title}>
-                <CardHeader>
-                  <div className="text-4xl mb-2">{feature.icon}</div>
-                  <CardTitle>{feature.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <div key={feature.title} className="p-6 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-violet-500/20 transition-all">
+                <feature.icon className="w-8 h-8 text-violet-400 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground text-sm">{feature.description}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-muted/50">
+      <section className="py-20 bg-white/[0.02]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">
-            Das sagen unsere Nutzer
-          </h2>
+          <h2 className="text-3xl font-bold text-center mb-12">Das sagen unsere Nutzer</h2>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t) => (
-              <Card key={t.name}>
-                <CardContent className="pt-6">
-                  <p className="text-muted-foreground mb-4">"{t.text}"</p>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                      {t.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.grade}</p>
-                    </div>
+              <div key={t.name} className="p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+                <p className="text-muted-foreground mb-4">"{t.text}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-sm font-bold">
+                    {t.name[0]}
                   </div>
-                </CardContent>
-              </Card>
+                  <div>
+                    <p className="text-sm font-medium">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.grade}</p>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 bg-primary text-primary-foreground">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Bereit, bessere Noten zu schreiben?
-          </h2>
-          <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
-            Starte jetzt deine kostenlose Testwoche und erlebe, wie Astra AI dir beim Lernen hilft.
-          </p>
-          <Link href="/signup">
-            <Button size="lg" variant="secondary" className="text-lg px-8">
-              Kostenlos starten
-            </Button>
-          </Link>
+      <section className="py-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="rounded-3xl bg-gradient-to-br from-violet-900/30 to-indigo-900/30 border border-violet-500/20 p-12">
+            <h2 className="text-3xl font-bold mb-4">Bereit, bessere Noten zu schreiben?</h2>
+            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+              Starte jetzt deine kostenlose Testwoche und erlebe, wie Astra AI dir beim Lernen hilft.
+            </p>
+            <Link href="/signup">
+              <Button size="lg" className="text-lg px-8 bg-white text-violet-600 hover:bg-gray-100">
+                Kostenlos starten
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t">
+      <footer className="py-12 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="text-xl font-bold text-primary">Astra AI</div>
-            <div className="flex gap-6 text-sm text-muted-foreground">
-              <Link href="/" className="hover:text-foreground">Startseite</Link>
-              <Link href="/pricing" className="hover:text-foreground">Preise</Link>
-              <Link href="/login" className="hover:text-foreground">Anmelden</Link>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center">
+                <span className="text-white text-sm font-bold">a</span>
+              </div>
+              <span className="text-xl font-bold">Astra AI</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              © 2024 Astra AI. Alle Rechte vorbehalten.
-            </p>
+            <div className="flex gap-6 text-sm text-muted-foreground">
+              <Link href="/" className="hover:text-white transition-colors">Startseite</Link>
+              <Link href="/pricing" className="hover:text-white transition-colors">Preise</Link>
+              <Link href="/login" className="hover:text-white transition-colors">Anmelden</Link>
+            </div>
+            <p className="text-sm text-muted-foreground">© 2024 Astra AI</p>
           </div>
         </div>
       </footer>

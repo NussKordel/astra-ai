@@ -6,6 +6,8 @@ create table profiles (
   subscription_tier text not null default 'free',
   trial_ends_at timestamptz,
   is_admin boolean default false,
+  coupon_code text,
+  api_calls_used int default 0,
   created_at timestamptz default now()
 );
 alter table profiles enable row level security;

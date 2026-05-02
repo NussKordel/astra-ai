@@ -1,20 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import ChatMessage from "@/components/chat/ChatMessage";
 import ChatInput from "@/components/chat/ChatInput";
-import QuizCard from "@/components/chat/QuizCard";
 import {
   createConversation,
   saveMessage,
   uploadHomeworkImage,
 } from "./actions";
-import { generateQuiz } from "./quiz-actions";
 
 interface Message {
   id: string;
@@ -26,15 +22,16 @@ interface Message {
 
 export default function TutorChatPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const subject = decodeURIComponent(params.subject as string);
+  const initialMessage = searchParams.get("initialMessage");
+  
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
-  const [showQuiz, setShowQuiz] = useState(false);
-  const [quizQuestions, setQuizQuestions] = useState<any[]>([]);
-  const [quizTopic, setQuizTopic] = useState("");
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [apiLimitReached, setApiLimitReached] = useState(false);
+  const [apiCallsUsed, setApiCallsUsed] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
 
@@ -47,13 +44,32 @@ export default function TutorChatPage() {
   }, [messages, streamingContent]);
 
   useEffect(() => {
-    async function initConversation() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Check API limits
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("api_calls_used, coupon_code, subscription_tier, trial_ends_at")
+        .eq("id", user.id)
+        .single();
+
+      if (profile) {
+        setApiCallsUsed(profile.api_calls_used || 0);
+        
+        const isUnlimited = 
+          profile.coupon_code === "ASTRAUNLIMITED" ||
+          profile.subscription_tier === "plus" ||
+          profile.subscription_tier === "abitur" ||
+          (profile.trial_ends_at && new Date(profile.trial_ends_at) > new Date());
+        
+        if (!isUnlimited && (profile.api_calls_used || 0) >= 3) {
+          setApiLimitReached(true);
+        }
+      }
+
+      // Find or create conversation
       const { data: existing } = await supabase
         .from("conversations")
         .select("id")
@@ -83,26 +99,49 @@ export default function TutorChatPage() {
       if (msgs) {
         setMessages(msgs);
       }
+
+      // Send initial message if provided
+      if (initialMessage && msgs && msgs.length === 0) {
+        handleSend(initialMessage);
+      }
     }
 
-    initConversation();
+    init();
   }, [subject]);
 
   const handleSend = async (content: string, imageUrl?: string) => {
     if (!conversationId) return;
+    if (apiLimitReached) return;
 
+    // Check limit again before sending
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("api_calls_used, coupon_code, subscription_tier, trial_ends_at")
+      .eq("id", user.id)
+      .single();
+
+    const isUnlimited = 
+      profile?.coupon_code === "ASTRAUNLIMITED" ||
+      profile?.subscription_tier === "plus" ||
+      profile?.subscription_tier === "abitur" ||
+      (profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date());
+
+    if (!isUnlimited && (profile?.api_calls_used || 0) >= 3) {
+      setApiLimitReached(true);
+      setApiCallsUsed(profile?.api_calls_used || 0);
+      return;
+    }
+
+    // Save user message
     await saveMessage(conversationId, "user", content, imageUrl);
 
     const tempId = Date.now().toString();
     setMessages((prev) => [
       ...prev,
-      {
-        id: tempId,
-        role: "user",
-        content,
-        image_url: imageUrl || null,
-        created_at: new Date().toISOString(),
-      },
+      { id: tempId, role: "user", content, image_url: imageUrl || null, created_at: new Date().toISOString() },
     ]);
 
     setLoading(true);
@@ -133,27 +172,29 @@ export default function TutorChatPage() {
 
       setMessages((prev) => [
         ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: fullResponse,
-          image_url: null,
-          created_at: new Date().toISOString(),
-        },
+        { id: (Date.now() + 1).toString(), role: "assistant", content: fullResponse, image_url: null, created_at: new Date().toISOString() },
       ]);
+
+      // Increment API call counter for free users
+      if (!isUnlimited) {
+        await supabase
+          .from("profiles")
+          .update({ api_calls_used: (profile?.api_calls_used || 0) + 1 })
+          .eq("id", user.id);
+        
+        setApiCallsUsed((prev) => prev + 1);
+        
+        if ((profile?.api_calls_used || 0) + 1 >= 3) {
+          setApiLimitReached(true);
+        }
+      }
     } catch (error) {
       console.error("Chat error:", error);
       const errorMsg = "KI momentan nicht verfügbar, bitte versuche es erneut.";
       await saveMessage(conversationId, "assistant", errorMsg);
       setMessages((prev) => [
         ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: errorMsg,
-          image_url: null,
-          created_at: new Date().toISOString(),
-        },
+        { id: (Date.now() + 1).toString(), role: "assistant", content: errorMsg, image_url: null, created_at: new Date().toISOString() },
       ]);
     }
 
@@ -167,108 +208,64 @@ export default function TutorChatPage() {
     return await uploadHomeworkImage(formData);
   };
 
-  const handleStartQuiz = async () => {
-    if (!quizTopic.trim()) return;
-    setQuizLoading(true);
-    try {
-      const questions = await generateQuiz(subject, quizTopic, 5);
-      setQuizQuestions(questions);
-      setShowQuiz(true);
-    } catch (error) {
-      console.error("Quiz generation failed:", error);
-      alert("Quiz konnte nicht generiert werden. Bitte versuche es erneut.");
-    }
-    setQuizLoading(false);
-  };
-
-  const handleQuizComplete = (correct: number, total: number) => {
-    alert(`Quiz abgeschlossen! ${correct} von ${total} richtig.`);
-    setShowQuiz(false);
-    setQuizQuestions([]);
-    setQuizTopic("");
-  };
-
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="mb-4 flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold">{subject}</h1>
-          <p className="text-sm text-muted-foreground">
-            Stelle Fragen, lass dir Erklärungen geben oder lade ein Bild hoch.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {!showQuiz && (
-            <div className="flex gap-2 items-end">
-              <div>
-                <Label htmlFor="quiz-topic" className="text-xs">Quiz-Thema</Label>
-                <Input
-                  id="quiz-topic"
-                  value={quizTopic}
-                  onChange={(e) => setQuizTopic(e.target.value)}
-                  placeholder="z.B. Quadratische Gleichungen"
-                  className="w-48 h-9"
-                />
-              </div>
-              <Button
-                onClick={handleStartQuiz}
-                disabled={quizLoading || !quizTopic.trim()}
-                size="sm"
-              >
-                {quizLoading ? "..." : "Quiz starten"}
-              </Button>
-            </div>
-          )}
-        </div>
+    <div className="flex flex-col h-[calc(100vh-3.5rem)] bg-[#0a0a0a]">
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-white/5">
+        <h1 className="text-xl font-semibold text-white">{subject}</h1>
+        <p className="text-sm text-muted-foreground">
+          KI-Nachhilfe · {apiLimitReached ? "Limit erreicht" : `${apiCallsUsed}/3 Nachrichten im Free-Tier`}
+        </p>
       </div>
 
-      {showQuiz && quizQuestions.length > 0 ? (
-        <QuizCard questions={quizQuestions} onComplete={handleQuizComplete} />
-      ) : (
-        <>
-          <div className="flex-1 overflow-y-auto space-y-4 pb-4 pr-2">
-            {messages.length === 0 && !loading && (
-              <div className="text-center text-muted-foreground py-12">
-                <p className="text-lg mb-2">Willkommen zum {subject}-Tutor!</p>
-                <p>Stelle eine Frage oder lade ein Bild deiner Hausaufgaben hoch.</p>
-              </div>
-            )}
-
-            {messages.map((msg) => (
-              <ChatMessage
-                key={msg.id}
-                role={msg.role}
-                content={msg.content}
-                imageUrl={msg.image_url}
-              />
-            ))}
-
-            {streamingContent && (
-              <ChatMessage role="assistant" content={streamingContent} />
-            )}
-
-            {loading && !streamingContent && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-lg px-4 py-3">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce delay-100" />
-                    <div className="w-2 h-2 bg-foreground/50 rounded-full animate-bounce delay-200" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          <ChatInput
-            onSend={handleSend}
-            onUploadImage={handleUploadImage}
-            disabled={loading}
-          />
-        </>
+      {/* API Limit Warning */}
+      {apiLimitReached && (
+        <div className="mx-6 mt-4 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+          <p className="text-amber-400 text-sm font-medium mb-2">
+            Du hast dein Free-Limit von 3 Nachrichten erreicht.
+          </p>
+          <Button
+            onClick={() => window.location.href = "/settings"}
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+            size="sm"
+          >
+            Upgrade auf Astra Plus
+          </Button>
+        </div>
       )}
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 px-6 py-4">
+        {messages.length === 0 && !loading && (
+          <div className="text-center text-muted-foreground py-12">
+            <p className="text-lg mb-2">Willkommen zum {subject}-Tutor!</p>
+            <p>Stelle eine Frage oder lade ein Bild deiner Hausaufgaben hoch.</p>
+          </div>
+        )}
+
+        {messages.map((msg) => (
+          <ChatMessage key={msg.id} role={msg.role} content={msg.content} imageUrl={msg.image_url} />
+        ))}
+
+        {streamingContent && <ChatMessage role="assistant" content={streamingContent} />}
+
+        {loading && !streamingContent && (
+          <div className="flex justify-start">
+            <div className="bg-white/5 rounded-lg px-4 py-3">
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce delay-100" />
+                <div className="w-2 h-2 bg-violet-500 rounded-full animate-bounce delay-200" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <ChatInput onSend={handleSend} onUploadImage={handleUploadImage} disabled={loading || apiLimitReached} />
     </div>
   );
 }

@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { openrouter, MODELS } from "@/lib/openrouter/client";
 import { examPrepPrompt } from "@/lib/openrouter/prompts/exam-prep";
 
@@ -42,23 +40,16 @@ export default function ExamSessionPage() {
 
       if (session) {
         setSubject(session.subject);
-
         const { data: profile } = await supabase
           .from("profiles")
           .select("grade_level")
           .eq("id", session.user_id)
           .single();
-
-        if (profile?.grade_level) {
-          setGradeLevel(profile.grade_level);
-        }
-
+        if (profile?.grade_level) setGradeLevel(profile.grade_level);
         await generateExam(session.subject, profile?.grade_level || "Klasse 10");
       }
-
       setLoading(false);
     }
-
     init();
   }, [sessionId]);
 
@@ -67,44 +58,14 @@ export default function ExamSessionPage() {
     try {
       const response = await openrouter.chat.completions.create({
         model: MODELS.default,
-        messages: [
-          {
-            role: "user",
-            content: examPrepPrompt(subj, grade, timed) + `
-
-Erstelle die Prüfung als JSON-Array mit diesem Format:
-[
-  {
-    "question": "Aufgabentext hier"
-  }
-]
-Erstelle 3-5 Aufgaben.`,
-          },
-        ],
+        messages: [{ role: "user", content: examPrepPrompt(subj, grade, timed) + `\n\nErstelle die Prüfung als JSON-Array:\n[{"question": "Aufgabentext"}]\nErstelle 3-5 Aufgaben.` }],
       });
-
       const content = response.choices[0].message.content || "[]";
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-
-      setQuestions(
-        parsed.map((q: any) => ({
-          question: q.question,
-          studentAnswer: "",
-          feedback: "",
-          score: 0,
-        }))
-      );
+      setQuestions(parsed.map((q: any) => ({ question: q.question, studentAnswer: "", feedback: "", score: 0 })));
     } catch (error) {
-      console.error("Exam generation failed:", error);
-      setQuestions([
-        {
-          question: "Fehler bei der Prüfungsgenerierung. Bitte versuche es erneut.",
-          studentAnswer: "",
-          feedback: "",
-          score: 0,
-        },
-      ]);
+      setQuestions([{ question: "Fehler bei der Prüfungsgenerierung. Bitte versuche es erneut.", studentAnswer: "", feedback: "", score: 0 }]);
     }
     setGenerating(false);
   };
@@ -112,45 +73,25 @@ Erstelle 3-5 Aufgaben.`,
   const handleSubmitAnswer = async () => {
     const currentQ = questions[currentIndex];
     if (!currentQ.studentAnswer.trim()) return;
-
     setGenerating(true);
     try {
       const response = await openrouter.chat.completions.create({
         model: MODELS.default,
         messages: [
-          {
-            role: "system",
-            content: `Du bist ein Prüfungscoach für ${subject} (${gradeLevel}). Bewerte die Antwort des Schülers fair und gib konstruktives Feedback auf Deutsch.`,
-          },
-          {
-            role: "user",
-            content: `Aufgabe: ${currentQ.question}\n\nSchülerantwort: ${currentQ.studentAnswer}\n\nBewerte die Antwort mit einer Punktzahl von 0-100 und gib detailliertes Feedback. Antworte im JSON-Format:\n{\n  "score": 85,\n  "feedback": "Feedback hier..."\n}`,
-          },
+          { role: "system", content: `Du bist ein Prüfungscoach für ${subject} (${gradeLevel}). Bewerte fair und gib konstruktives Feedback auf Deutsch.` },
+          { role: "user", content: `Aufgabe: ${currentQ.question}\n\nSchülerantwort: ${currentQ.studentAnswer}\n\nBewerte mit Punktzahl 0-100. JSON: {"score": 85, "feedback": "..."}` },
         ],
       });
-
       const content = response.choices[0].message.content || "";
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      const result = jsonMatch
-        ? JSON.parse(jsonMatch[0])
-        : { score: 50, feedback: "Antwort wurde bewertet." };
-
+      const result = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 50, feedback: "Bewertet." };
       const updated = [...questions];
-      updated[currentIndex] = {
-        ...currentQ,
-        feedback: result.feedback,
-        score: result.score,
-      };
+      updated[currentIndex] = { ...currentQ, feedback: result.feedback, score: result.score };
       setQuestions(updated);
       setShowResults(true);
     } catch (error) {
-      console.error("Grading failed:", error);
       const updated = [...questions];
-      updated[currentIndex] = {
-        ...currentQ,
-        feedback: "Bewertung momentan nicht verfügbar.",
-        score: 0,
-      };
+      updated[currentIndex] = { ...currentQ, feedback: "Bewertung nicht verfügbar.", score: 0 };
       setQuestions(updated);
       setShowResults(true);
     }
@@ -166,47 +107,28 @@ Erstelle 3-5 Aufgaben.`,
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex items-center justify-center h-full"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-500" /></div>;
 
   if (sessionComplete) {
     const totalScore = questions.reduce((sum, q) => sum + q.score, 0);
     const avgScore = Math.round(totalScore / questions.length);
-
     return (
-      <div className="max-w-2xl mx-auto space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Prüfung abgeschlossen!</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-primary">{avgScore}%</p>
-              <p className="text-muted-foreground">Durchschnittliche Punktzahl</p>
+      <div className="max-w-2xl mx-auto px-6 py-8">
+        <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+          <div className="text-center mb-6">
+            <p className="text-5xl font-bold gradient-text">{avgScore}%</p>
+            <p className="text-muted-foreground">Durchschnittliche Punktzahl</p>
+          </div>
+          {questions.map((q, i) => (
+            <div key={i} className="border border-white/5 rounded-xl p-4 mb-3">
+              <p className="font-medium text-white mb-2">Aufgabe {i + 1}</p>
+              <p className="text-sm text-muted-foreground mb-2">{q.question}</p>
+              <p className="text-sm text-violet-400">Punkte: {q.score}/100</p>
+              <p className="text-sm mt-1">{q.feedback}</p>
             </div>
-            {questions.map((q, i) => (
-              <div key={i} className="border rounded-lg p-4">
-                <p className="font-medium mb-2">Aufgabe {i + 1}</p>
-                <p className="text-sm text-muted-foreground mb-2">{q.question}</p>
-                <p className="text-sm mb-1">
-                  <span className="font-medium">Deine Antwort:</span> {q.studentAnswer}
-                </p>
-                <p className="text-sm text-primary">
-                  <span className="font-medium">Punkte:</span> {q.score}/100
-                </p>
-                <p className="text-sm mt-1">{q.feedback}</p>
-              </div>
-            ))}
-            <Button onClick={() => window.location.reload()} className="w-full">
-              Neue Prüfung starten
-            </Button>
-          </CardContent>
-        </Card>
+          ))}
+          <Button onClick={() => window.location.reload()} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600">Neue Prüfung</Button>
+        </div>
       </div>
     );
   }
@@ -214,77 +136,41 @@ Erstelle 3-5 Aufgaben.`,
   const currentQ = questions[currentIndex];
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">
-          Prüfung: {subject}
-        </h1>
-        <span className="text-sm text-muted-foreground">
-          Aufgabe {currentIndex + 1} von {questions.length}
-        </span>
+    <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl font-bold text-white">Prüfung: {subject}</h1>
+        <span className="text-sm text-muted-foreground">Aufgabe {currentIndex + 1} von {questions.length}</span>
       </div>
 
-      {generating && !currentQ?.question ? (
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Aufgabe {currentIndex + 1}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-base">{currentQ?.question}</p>
+      <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+        <p className="text-base text-white mb-4">{currentQ?.question}</p>
 
-            {!showResults && (
-              <>
-                <Textarea
-                  value={currentQ?.studentAnswer}
-                  onChange={(e) => {
-                    const updated = [...questions];
-                    updated[currentIndex].studentAnswer = e.target.value;
-                    setQuestions(updated);
-                  }}
-                  placeholder="Deine Antwort..."
-                  rows={6}
-                  disabled={generating}
-                />
-                <Button
-                  onClick={handleSubmitAnswer}
-                  disabled={!currentQ?.studentAnswer.trim() || generating}
-                  className="w-full"
-                >
-                  {generating ? "Wird bewertet..." : "Antwort einreichen"}
-                </Button>
-              </>
-            )}
-
-            {showResults && (
-              <div className="space-y-4">
-                <div
-                  className={`p-4 rounded-lg ${
-                    currentQ.score >= 70
-                      ? "bg-green-50"
-                      : currentQ.score >= 40
-                      ? "bg-yellow-50"
-                      : "bg-red-50"
-                  }`}
-                >
-                  <p className="font-medium text-lg">
-                    Punkte: {currentQ.score}/100
-                  </p>
-                  <p className="text-sm mt-2">{currentQ.feedback}</p>
-                </div>
-                <Button onClick={handleNext} className="w-full">
-                  {currentIndex < questions.length - 1
-                    ? "Nächste Aufgabe"
-                    : "Ergebnisse anzeigen"}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+        {!showResults ? (
+          <>
+            <textarea
+              value={currentQ?.studentAnswer}
+              onChange={(e) => { const updated = [...questions]; updated[currentIndex].studentAnswer = e.target.value; setQuestions(updated); }}
+              placeholder="Deine Antwort..."
+              rows={6}
+              disabled={generating}
+              className="w-full p-4 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-muted-foreground focus:outline-none focus:border-violet-500 resize-none mb-4"
+            />
+            <Button onClick={handleSubmitAnswer} disabled={!currentQ?.studentAnswer.trim() || generating} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600">
+              {generating ? "Wird bewertet..." : "Antwort einreichen"}
+            </Button>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className={`p-4 rounded-xl ${currentQ.score >= 70 ? "bg-green-500/10 border border-green-500/20" : currentQ.score >= 40 ? "bg-yellow-500/10 border border-yellow-500/20" : "bg-red-500/10 border border-red-500/20"}`}>
+              <p className="font-medium text-lg text-white">Punkte: {currentQ.score}/100</p>
+              <p className="text-sm mt-2 text-muted-foreground">{currentQ.feedback}</p>
+            </div>
+            <Button onClick={handleNext} className="w-full bg-gradient-to-r from-violet-600 to-indigo-600">
+              {currentIndex < questions.length - 1 ? "Nächste Aufgabe" : "Ergebnisse"}
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

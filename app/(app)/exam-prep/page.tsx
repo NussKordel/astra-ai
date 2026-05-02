@@ -4,10 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Clock, BookOpen } from "lucide-react";
 import { SUBJECTS } from "@/lib/constants";
-import { Switch } from "@/components/ui/switch";
 
 export default function ExamPrepPage() {
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -20,84 +18,76 @@ export default function ExamPrepPage() {
     if (!selectedSubject) return;
     setLoading(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { router.push("/login"); return; }
 
     const { data: session } = await supabase
       .from("conversations")
-      .insert({
-        user_id: user.id,
-        subject: selectedSubject,
-        module: "exam_prep",
-      })
+      .insert({ user_id: user.id, subject: selectedSubject, module: "exam_prep" })
       .select()
       .single();
 
-    if (session) {
-      router.push(`/exam-prep/${session.id}?timed=${timed}`);
-    }
-
+    if (session) router.push(`/exam-prep/${session.id}?timed=${timed}`);
     setLoading(false);
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Prüfungstraining</h1>
-        <p className="text-muted-foreground mt-2">
-          Bereite dich mit KI-generierten Prüfungsaufgaben vor
-        </p>
+    <div className="max-w-2xl mx-auto px-6 py-8">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-white">Prüfungstraining</h1>
+        <p className="text-muted-foreground mt-1">Bereite dich mit KI-generierten Prüfungsaufgaben vor</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Neue Prüfung starten</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Fach wählen</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {SUBJECTS.map((subject) => (
-                <button
-                  key={subject}
-                  onClick={() => setSelectedSubject(subject)}
-                  className={`p-3 rounded-lg border text-sm font-medium transition-colors ${
-                    selectedSubject === subject
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border hover:bg-accent"
-                  }`}
-                >
-                  {subject}
-                </button>
-              ))}
+      <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/5">
+        <h3 className="font-medium text-white mb-4">Neue Prüfung starten</h3>
+        
+        <div className="space-y-2 mb-6">
+          <p className="text-sm text-muted-foreground mb-2">Fach wählen</p>
+          <div className="grid grid-cols-2 gap-2">
+            {SUBJECTS.map((subject) => (
+              <button
+                key={subject}
+                onClick={() => setSelectedSubject(subject)}
+                className={`p-3 rounded-xl border text-sm font-medium transition-all text-left ${
+                  selectedSubject === subject
+                    ? "border-violet-500 bg-violet-500/10 text-violet-400"
+                    : "border-white/10 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {subject}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-6 p-4 rounded-xl bg-white/5">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium text-white">Zeitgesteuert</p>
+              <p className="text-xs text-muted-foreground">Begrenzte Zeit pro Aufgabe</p>
             </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Zeitgesteuert</Label>
-              <p className="text-sm text-muted-foreground">
-                Begrenzte Zeit pro Aufgabe
-              </p>
-            </div>
-            <Switch checked={timed} onCheckedChange={setTimed} />
-          </div>
-
-          <Button
-            onClick={handleStart}
-            disabled={!selectedSubject || loading}
-            className="w-full"
+          <button
+            onClick={() => setTimed(!timed)}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              timed ? "bg-violet-600" : "bg-white/10"
+            }`}
           >
-            {loading ? "Wird erstellt..." : "Prüfung starten"}
-          </Button>
-        </CardContent>
-      </Card>
+            <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${
+              timed ? "left-6" : "left-0.5"
+            }`} />
+          </button>
+        </div>
+
+        <Button
+          onClick={handleStart}
+          disabled={!selectedSubject || loading}
+          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500"
+        >
+          {loading ? "Wird erstellt..." : "Prüfung starten"}
+        </Button>
+      </div>
     </div>
   );
 }

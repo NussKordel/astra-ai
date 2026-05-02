@@ -17,6 +17,8 @@ export interface Database {
           subscription_tier: string;
           trial_ends_at: string | null;
           is_admin: boolean;
+          coupon_code: string | null;
+          api_calls_used: number;
           created_at: string;
         };
         Insert: {
@@ -26,6 +28,8 @@ export interface Database {
           subscription_tier?: string;
           trial_ends_at?: string | null;
           is_admin?: boolean;
+          coupon_code?: string | null;
+          api_calls_used?: number;
           created_at?: string;
         };
         Update: {
@@ -35,6 +39,8 @@ export interface Database {
           subscription_tier?: string;
           trial_ends_at?: string | null;
           is_admin?: boolean;
+          coupon_code?: string | null;
+          api_calls_used?: number;
           created_at?: string;
         };
       };
