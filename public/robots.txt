@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /tutor
+Disallow: /exam-prep
+Disallow: /abitur
+Disallow: /settings
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: https://astra-ai.de/sitemap.xml
