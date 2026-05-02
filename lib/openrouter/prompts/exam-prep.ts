@@ -12,6 +12,8 @@ WICHTIGE REGELN FÜR FORMELN:
 - Ableitung: $\frac{d}{dx}(x^n) = n \cdot x^{n-1}$
 - Integral: $\int_a^b f(x) \, dx$
 - Nie doppelte Backslashes: \frac NICHT \\frac
+- NIE \\begin{aligned}, \\begin{align} oder ähnliche Umgebungen verwenden!
+- Für mehrzeilige Formeln: Jede Zeile in eigene $$...$$ Blöcke schreiben.
 
 Die Aufgaben sollen Schritt für Schritt aufbauen.
 Sei präzise und schulgerecht.

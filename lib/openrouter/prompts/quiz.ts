@@ -8,8 +8,8 @@ WICHTIGE REGELN FÜR FORMELN:
 - Hochgestellt: $x^2$, $x^n$
 - Multiplikation: $2 \cdot x$
 - Ableitung: $\frac{d}{dx}(x^n) = n \cdot x^{n-1}$
-- Integral: $\int_a^b f(x) \, dx$
 - Nie doppelte Backslashes verwenden.
+- NIE \\begin{aligned}, \\begin{align} oder ähnliche Umgebungen verwenden!
 
 Antworte NUR mit einem JSON-Array in diesem Format:
 [

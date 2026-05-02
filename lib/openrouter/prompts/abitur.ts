@@ -23,6 +23,8 @@ WICHTIG:
 3. Hochgestellt mit ^ : $x^2$
 4. Multiplikation mit \cdot : $2 \cdot x$
 5. Keine doppelten Backslashes: \frac NICHT \\frac
+6. NIE \\begin{aligned}, \\begin{align} oder ähnliche Umgebungen verwenden!
+7. Für mehrzeilige Formeln: Jede Zeile in eigene $$...$$ Blöcke schreiben.
 
 LEHR-METHODE:
 1. Gib NIEMALS die komplette Lösung auf einmal.

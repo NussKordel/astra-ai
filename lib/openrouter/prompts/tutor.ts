@@ -37,6 +37,15 @@ WICHTIGE FORMATIERUNGSREGELN:
 6. Nie Leerzeichen zwischen \ und Befehl: \frac NICHT \ frac
 7. Nie doppelte Backslashes: \frac NICHT \\frac
 8. NIE \\( oder \\) verwenden! Immer nur $ und $$
+9. NIE \\begin{aligned}, \\begin{align}, \\begin{equation} oder ähnliche Umgebungen verwenden!
+10. Für mehrzeilige Formeln: Schreibe jede Zeile in eigene $$...$$ Blöcke, NICHT aligned verwenden.
+
+RICHTIG für mehrzeilige Formeln:
+$$f(x) = 2x^3 + 4x$$
+$$f'(x) = 6x^2 + 4$$
+
+FALSCH (NIEMALS SO SCHREIBEN):
+\\begin{aligned} f(x) &= 2x^3 + 4x \\\\ f'(x) &= 6x^2 + 4 \\end{aligned}
 
 BEISPIELE FÜR PERFEKTE FORMELN:
 - $f(x) = x^3 - 2x^2 + x - 1$
