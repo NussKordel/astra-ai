@@ -5,6 +5,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
+import { preprocessMathText, postprocessMathText } from "@/lib/math-utils";
 
 interface ChatMessageProps {
   role: "user" | "assistant";
@@ -14,6 +15,9 @@ interface ChatMessageProps {
 
 export default function ChatMessage({ role, content, imageUrl }: ChatMessageProps) {
   const isUser = role === "user";
+  
+  // Process math text for proper rendering
+  const processedContent = postprocessMathText(preprocessMathText(content));
 
   const speakText = () => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -27,7 +31,7 @@ export default function ChatMessage({ role, content, imageUrl }: ChatMessageProp
     <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-5 py-3.5",
+          "max-w-[85%] rounded-2xl px-5 py-3.5",
           isUser
             ? "bg-violet-600 text-white"
             : "bg-white/5 text-foreground border border-white/5"
@@ -41,8 +45,17 @@ export default function ChatMessage({ role, content, imageUrl }: ChatMessageProp
           />
         )}
         <div className="prose prose-sm max-w-none prose-invert prose-pre:bg-black/30">
-          <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {content}
+          <ReactMarkdown 
+            remarkPlugins={[remarkMath]} 
+            rehypePlugins={[rehypeKatex]}
+            components={{
+              // Custom paragraph to handle math spacing
+              p: ({ children }) => (
+                <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>
+              ),
+            }}
+          >
+            {processedContent}
           </ReactMarkdown>
         </div>
         {!isUser && (

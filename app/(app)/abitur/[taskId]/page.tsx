@@ -5,6 +5,10 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
+import { preprocessMathText, postprocessMathText } from "@/lib/math-utils";
 import { BookOpen, MessageCircle, ChevronRight } from "lucide-react";
 
 interface Task {
@@ -88,7 +92,9 @@ export default function AbiturTaskPage() {
             <span className="text-sm font-medium text-white">Aufgabenstellung</span>
           </div>
           <div className="prose prose-sm max-w-none prose-invert">
-            <ReactMarkdown>{task.question_text}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+              {postprocessMathText(preprocessMathText(task.question_text))}
+            </ReactMarkdown>
           </div>
         </div>
 
@@ -99,7 +105,9 @@ export default function AbiturTaskPage() {
               <span className="text-sm font-medium text-white">Lösung</span>
             </div>
             <div className="prose prose-sm max-w-none prose-invert">
-              <ReactMarkdown>{task.solution_text}</ReactMarkdown>
+              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {postprocessMathText(preprocessMathText(task.solution_text))}
+              </ReactMarkdown>
             </div>
           </div>
         )}
@@ -120,14 +128,22 @@ export default function AbiturTaskPage() {
           {chatMessages.map((msg, i) => (
             <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${msg.role === "user" ? "bg-violet-600 text-white" : "bg-white/5 text-foreground border border-white/5"}`}>
-                <div className="prose prose-sm max-w-none prose-invert"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                <div className="prose prose-sm max-w-none prose-invert">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {postprocessMathText(preprocessMathText(msg.content))}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           ))}
           {streamingContent && (
             <div className="flex justify-start">
               <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-white/5 border border-white/5">
-                <div className="prose prose-sm max-w-none prose-invert"><ReactMarkdown>{streamingContent}</ReactMarkdown></div>
+                <div className="prose prose-sm max-w-none prose-invert">
+                  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {postprocessMathText(preprocessMathText(streamingContent))}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           )}
