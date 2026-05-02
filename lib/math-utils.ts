@@ -7,43 +7,21 @@ export function preprocessMathText(text: string): string {
 
   let processed = text;
 
-  // Fix double backslashes (common AI mistake: \\frac instead of \frac)
-  // But don't break existing correct LaTeX
-  
-  // Fix common math patterns that AI writes without LaTeX delimiters
-  const mathPatterns = [
-    // f(x) = x^2 patterns
-    { pattern: /([a-zA-Z])\(([^)]+)\)\s*=\s*([^\s,]+)/g, replacement: "$$$1($2) = $3$$" },
-    // Power of x: x^2, x^n, etc.
-    { pattern: /(?<!\$)(x\^[0-9a-zA-Z]+)(?!\$)/g, replacement: "$$$1$$" },
-    // Simple fractions like (1/2), (a/b)
-    { pattern: /\(([^/]+)\/([^)]+)\)/g, replacement: "$$\\frac{$1}{$2}$$" },
-  ];
-
-  // Apply patterns carefully - only if not already in math mode
-  // Check if text has LaTeX delimiters
-  const hasLatexDelimiters = /\$\$.*?\$\$|\$[^\s$]+\$/.test(processed);
-  
-  if (!hasLatexDelimiters) {
-    // Wrap standalone math expressions
-    processed = processed
-      // f(x) = ... patterns
-      .replace(/([a-zA-Z])\(([^)]+)\)\s*=\s*([^\n,]+)/g, (match, func, args, expr) => {
-        if (match.includes('$$')) return match;
-        return `$${func}(${args}) = ${expr}$`;
-      })
-      // Power of x
-      .replace(/(?<![a-zA-Z])x\^([0-9a-zA-Z]+)(?![a-zA-Z])/g, "$$x^{$1}$$")
-      // Common functions
-      .replace(/\b(sin|cos|tan|log|ln|lim|sum|int)\b/g, "\\$1")
-      // Common constants
-      .replace(/\b(pi|alpha|beta|gamma|delta|theta)\b/g, "\\$1");
-  }
-
-  // Fix AI double-escaping issues
+  // STEP 1: Convert LaTeX delimiters \( ... \) to $...$ (inline math)
+  // The AI uses \( f(x) = x^2 \) but remark-math expects $f(x) = x^2$
   processed = processed
-    // Fix \\frac -> \frac (AI sometimes double-escapes)
+    .replace(/\\\(\s*/g, "$")   // \(... -> $...
+    .replace(/\s*\\\)/g, "$");    // ...\) -> ...$
+
+  // STEP 2: Convert LaTeX delimiters \[ ... \] to $$...$$ (display math)
+  processed = processed
+    .replace(/\\\[\s*/g, "$$")    // \[... -> $$...
+    .replace(/\s*\\\]/g, "$$");    // ...\] -> ...$$
+
+  // STEP 3: Fix double backslashes (common AI mistake: \\frac instead of \frac)
+  processed = processed
     .replace(/\\\\frac/g, "\\frac")
+    .replace(/\\\\cdot/g, "\\cdot")
     .replace(/\\\\cdot/g, "\\cdot")
     .replace(/\\\\int/g, "\\int")
     .replace(/\\\\sum/g, "\\sum")
@@ -67,24 +45,42 @@ export function preprocessMathText(text: string): string {
     .replace(/\\\\infty/g, "\\infty")
     .replace(/\\\\to/g, "\\to")
     .replace(/\\\\Rightarrow/g, "\\Rightarrow")
+    .replace(/\\\\Rightarrow/g, "\\Rightarrow")
     .replace(/\\\\Leftarrow/g, "\\Leftarrow")
     .replace(/\\\\rightarrow/g, "\\rightarrow")
     .replace(/\\\\leftarrow/g, "\\leftarrow")
     .replace(/\\\\quad/g, "\\quad")
     .replace(/\\\\,/g, "\\,")
-    .replace(/\\\\;\s/g, "\\;")
-    // Fix \$\$ -> $$ (if AI escaped dollar signs)
+    .replace(/\\\\;\s/g, "\\;");
+
+  // STEP 4: Fix escaped dollar signs (AI sometimes writes \$ instead of $)
+  processed = processed
     .replace(/\\\$\$\$/g, "$$$")
     .replace(/\\\$\$/g, "$$")
     .replace(/\\\$/g, "$");
 
-  // Ensure proper display math for multi-line formulas
-  processed = processed
-    // If a line has multiple LaTeX commands, wrap in $$..$$
-    .replace(/^(.*\\frac.*\\cdot.*)$/gm, (match) => {
-      if (match.startsWith("$$") || match.startsWith("$")) return match;
-      return `$$${match}$$`;
-    });
+  // STEP 5: Ensure text inside $...$ doesn't contain $ signs
+  // Split by math blocks and clean
+  const parts = processed.split(/(\$[^$]+\$)/g);
+  processed = parts.map((part, i) => {
+    // Even indices are text, odd are math
+    if (i % 2 === 1) {
+      // Math block - ensure single $ on each side
+      const content = part.replace(/^\$+/, "").replace(/\$+$/, "");
+      return `$${content}$`;
+    }
+    return part;
+  }).join("");
+
+  // STEP 6: Ensure display math $$...$$ is correct
+  const displayParts = processed.split(/(\$\$[^$]+\$\$)/g);
+  processed = displayParts.map((part, i) => {
+    if (i % 2 === 1) {
+      const content = part.replace(/^\$+/, "").replace(/\$+$/, "");
+      return `$$${content}$$`;
+    }
+    return part;
+  }).join("");
 
   return processed;
 }
