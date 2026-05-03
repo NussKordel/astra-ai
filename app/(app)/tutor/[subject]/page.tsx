@@ -11,6 +11,7 @@ import {
   createConversation,
   saveMessage,
   uploadHomeworkImage,
+  uploadPDF,
 } from "./actions";
 
 interface Message {
@@ -227,6 +228,12 @@ export default function TutorChatPage() {
     return await uploadHomeworkImage(formData);
   };
 
+  const handleUploadPDF = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return await uploadPDF(formData);
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !conversationId) return;
@@ -355,6 +362,7 @@ export default function TutorChatPage() {
       <ChatInput
         onSend={handleSend}
         onUploadImage={handleUploadImage}
+        onUploadPDF={handleUploadPDF}
         disabled={loading || apiLimitReached}
       />
     </div>

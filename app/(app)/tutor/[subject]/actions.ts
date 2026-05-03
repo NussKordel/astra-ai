@@ -2,10 +2,10 @@
 
 import { openrouter, MODELS } from "@/lib/openrouter/client";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { tutorSystemPrompt } from "@/lib/openrouter/prompts/tutor";
 
 async function ensureProfile(supabase: any, userId: string) {
-  // Check if profile exists
   const { data: existing } = await supabase
     .from("profiles")
     .select("id")
@@ -13,7 +13,6 @@ async function ensureProfile(supabase: any, userId: string) {
     .single();
 
   if (!existing) {
-    // Create profile if missing
     await supabase.from("profiles").insert({
       id: userId,
       trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -28,7 +27,6 @@ export async function sendMessage(
 ) {
   const supabase = createClient();
 
-  // Get conversation details
   const { data: conversation } = await supabase
     .from("conversations")
     .select("subject, user_id")
@@ -37,10 +35,8 @@ export async function sendMessage(
 
   if (!conversation) throw new Error("Conversation not found");
 
-  // Ensure profile exists
   await ensureProfile(supabase, conversation.user_id);
 
-  // Get user's grade level
   const { data: profile } = await supabase
     .from("profiles")
     .select("grade_level")
@@ -49,7 +45,6 @@ export async function sendMessage(
 
   const gradeLevel = profile?.grade_level || "Klasse 10";
 
-  // Get conversation history
   const { data: messages } = await supabase
     .from("messages")
     .select("role, content")
@@ -86,17 +81,11 @@ export async function sendMessage(
 
 export async function createConversation(subject: string, userId: string) {
   const supabase = createClient();
-
-  // Ensure profile exists before creating conversation
   await ensureProfile(supabase, userId);
 
   const { data, error } = await supabase
     .from("conversations")
-    .insert({
-      user_id: userId,
-      subject,
-      module: "tutor",
-    })
+    .insert({ user_id: userId, subject, module: "tutor" })
     .select()
     .single();
 
@@ -111,37 +100,69 @@ export async function saveMessage(
   imageUrl?: string
 ) {
   const supabase = createClient();
-
   const { error } = await supabase.from("messages").insert({
     conversation_id: conversationId,
     role,
     content,
     image_url: imageUrl || null,
   });
-
   if (error) throw error;
 }
 
+// Upload with Service Role (bypasses RLS)
 export async function uploadHomeworkImage(formData: FormData) {
-  const supabase = createClient();
+  const serviceSupabase = createServiceClient();
   const file = formData.get("file") as File;
 
   if (!file) throw new Error("No file provided");
 
   const fileExt = file.name.split(".").pop();
-  const fileName = `${Date.now()}.${fileExt}`;
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
-  const { data, error } = await supabase.storage
+  const { data, error } = await serviceSupabase.storage
     .from("homework-images")
     .upload(fileName, file, {
       contentType: file.type,
+      upsert: false,
     });
 
-  if (error) throw error;
+  if (error) {
+    console.error("Storage upload error:", error);
+    throw new Error(`Upload failed: ${error.message}`);
+  }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("homework-images").getPublicUrl(fileName);
+  const { data: { publicUrl } } = serviceSupabase.storage
+    .from("homework-images")
+    .getPublicUrl(fileName);
+
+  return publicUrl;
+}
+
+// Upload PDF with Service Role
+export async function uploadPDF(formData: FormData) {
+  const serviceSupabase = createServiceClient();
+  const file = formData.get("file") as File;
+
+  if (!file) throw new Error("No file provided");
+  if (file.type !== "application/pdf") throw new Error("Only PDF files allowed");
+
+  const fileName = `pdf-${Date.now()}-${Math.random().toString(36).slice(2)}.pdf`;
+
+  const { data, error } = await serviceSupabase.storage
+    .from("homework-images")
+    .upload(fileName, file, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+
+  if (error) {
+    console.error("PDF upload error:", error);
+    throw new Error(`PDF upload failed: ${error.message}`);
+  }
+
+  const { data: { publicUrl } } = serviceSupabase.storage
+    .from("homework-images")
+    .getPublicUrl(fileName);
 
   return publicUrl;
 }
